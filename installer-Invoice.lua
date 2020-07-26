@@ -116,9 +116,21 @@ local function getOnlineData(url)
     end
 end
 
+local function inList(t, el)
+    for k, v in pairs(t) do
+        if v == el then
+            return true
+        end
+    end
+    return false
+end
+
 local function downloadFile(url, path, name)
     url = baseUrl.."/"..ownerName.."/"..repositoryName.."/"..branch..url
     fs.makeDirectory(path)
+    if fs.exists(path..name) and inList(manifest["libraries"], path..name) then
+        fs.remove(path..name)
+    end
     local f, reason = io.open(path..name, "w")
     if not f then
         print(reason)
