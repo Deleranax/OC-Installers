@@ -208,11 +208,11 @@ function install()
         local result = downloadFile(file[1],file[2],file[3])
         if result then
             local txt = "OK "..file[2]..file[3]
-            text.padRight(txt, 42)
+            txt = text.padRight(txt, 42)
             table.insert(dlList, 1, txt)
         else
             local txt = "ERR "..file[2]..file[3]
-            text.padRight(txt, 42)
+            txt = text.padRight(txt, 42)
             table.insert(dlList, 1, txt)
         end
         
