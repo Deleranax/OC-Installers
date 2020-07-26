@@ -98,7 +98,7 @@ local function getOnlineData(url)
             str = str..chunk
         end
         local result, rt = pcall(serialization.unserialize, str)
-        if result then
+        if result and rt then
             return rt
         else
             gpu.setBackground(black)
