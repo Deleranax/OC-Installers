@@ -118,7 +118,7 @@ end
 
 local function inList(t, el)
     for k, v in pairs(t) do
-        if v == el then
+        if v == el or k == el then
             return true
         end
     end
