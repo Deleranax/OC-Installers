@@ -3,7 +3,14 @@ local component = require("component")
 local math = require("math")
 local text = require("text")
 local net = require("internet")
+local serialization = require("serialization")
+local fs = require("filesystem")
 local gpu = component.gpu
+
+if not component.isAvailable("internet") then
+    io.stderr:write("This program requires an internet card to run.")
+    os.exit()
+end
 
 local repositoryName = "OC-Invoice"
 local ownerName = "Deleranax"
@@ -16,11 +23,13 @@ local black = 0x000000
 local nblack = 0x5A5A5A
 local gray = 0xE1E1E1
 local lightGray = 0xF0F0F0
+local green = 0x00B640
 
 local scrolltmp = 0
 
 local buttonList = {}
 local manifest = {}
+local dlList = {}
 
 local w, h = gpu.getResolution()
 gpu.getResolution(math.max(w, 50), math.max(h, 16))
@@ -30,11 +39,11 @@ local bx = 1
 local by = 1
 
 if w > 50 then
-    bx = (w - 50)//2
+    bx = math.floor((w - 50)/2)
 end
 
 if h > 16 then
-    by = (h - 16)//2
+    by = math.floor((h - 16)/2)
 end
 
 function lwrite(x, y, mx, str, offset, limit)
@@ -88,7 +97,7 @@ function getOnlineData(url)
         for chunk in response do
             str = str..chunk
         end
-        local result, rt = pcall(serialization.unserialize(str))
+        local result, rt = pcall(serialization.unserialize, str)
         if result then
             return rt
         else
@@ -108,8 +117,11 @@ function getOnlineData(url)
 end
 
 function downloadFile(url, path, name)
+    url = baseUrl.."/"..ownerName.."/"..repositoryName.."/"..branch..url
+    fs.makeDirectory(path)
     local f, reason = io.open(path..name, "w")
     if not f then
+        print(reason)
         return false, path..name
     end
     local result, response = pcall(net.request, url)
@@ -121,8 +133,9 @@ function downloadFile(url, path, name)
         f:close()
         return true, path..name
     else
+        print(response)
         f:close()
-        filesystem.remove(path..name)
+        fs.remove(path..name)
         return false, path..name
     end
 end
@@ -140,6 +153,19 @@ function drawWindow()
     gpu.set(bx, by, "               Temver Setup Wizard                ")
 end
 
+function drawBar(c, m)
+    local nb = math.ceil((c/m) * 42)
+    
+    gpu.setBackground(white)
+    gpu.setForeground(black)
+    gpu.set(bx + 23, by + 2, math.ceil((c/m) * 100).."%")
+    
+    gpu.setBackground(gray)
+    gpu.fill(bx + 4, by + 3, 42, 1, " ")
+    gpu.setBackground(green)
+    gpu.fill(bx + 4, by + 3, nb, 1, " ")
+end
+
 function cancel()
     gpu.setBackground(black)
     gpu.setForeground(white)
@@ -147,10 +173,74 @@ function cancel()
     os.exit()
 end
 
-function install()
+function lastPage()
+    drawWindow()
+    gpu.setForeground(black)
+    gpu.setBackground(white)
+    local dy = lwrite(bx + 4, by + 2, 42, "Completing the "..repositoryName.." Setup Wizard")
+    
+    gpu.setForeground(nblack)
+    
+    dy = dy + lwrite(bx + 4, by + 3 + dy, 42, "Setup has finished installing "..repositoryName.." on your computer. Refer to the official documentation to know which script to execute to launch the program.")
+    
+    dy = dy + lwrite(bx + 4, by + 4 + dy, 42, "Click Finish to exit Setup.")
+
+    addButton("Finish", cancel)
+    
+    while true do
+        local evs = {term.pull("touch")}
+        for k, button in pairs(buttonList) do
+            if evs[3] >= button[1] and evs[3] <= button[1] + button[3] and evs[4] == button[2] then
+                button[4]()
+                break
+            end
+        end
+    end
 end
 
-function firstPage()
+function install()
+    drawWindow()
+    gpu.setForeground(nblack)
+    gpu.setBackground(white)
+    gpu.set(bx + 4, by + 5, "Downloading files...")
+    for k, file in ipairs(manifest["files"]) do
+        drawBar(k-1, #manifest["files"])
+        local result = downloadFile(file[1],file[2],file[3])
+        if result then
+            local txt = "OK "..file[2]..file[3]
+            text.padRight(txt, 42)
+            table.insert(dlList, 1, txt)
+        else
+            local txt = "ERR "..file[2]..file[3]
+            text.padRight(txt, 42)
+            table.insert(dlList, 1, txt)
+        end
+        
+        for k, txt in pairs(dlList) do
+            if k > 6 then
+                break
+            end
+            gpu.setForeground(nblack)
+            gpu.setBackground(white)
+            gpu.set(bx + 4, by + 5 + k, txt)
+        end
+    end
+    
+    drawBar(#manifest["files"], #manifest["files"])
+    addButton("Next >", lastPage)
+    
+    while true do
+        local evs = {term.pull("touch")}
+        for k, button in pairs(buttonList) do
+            if evs[3] >= button[1] and evs[3] <= button[1] + button[3] and evs[4] == button[2] then
+                button[4]()
+                break
+            end
+        end
+    end
+end
+
+function summaryPage()
     manifest = getOnlineData(baseUrl.."/"..ownerName.."/"..repositoryName.."/"..branch.."/manifest.txt")
     drawWindow()
     gpu.setForeground(nblack)
@@ -167,7 +257,7 @@ function firstPage()
     
     while true do
         local evs = {term.pull("touch")}
-        for button in buttonList do
+        for k, button in pairs(buttonList) do
             if evs[3] >= button[1] and evs[3] <= button[1] + button[3] and evs[4] == button[2] then
                 button[4]()
                 break
@@ -193,11 +283,11 @@ function licensePage()
         gpu.setForeground(white)
         gpu.setBackground(gray)
         gpu.fill(bx, by + 3 + dy, 50, 7, " ")
-        lwrite(bx + 4, by + 4 + dy, 42, "This work is licensed under CC BY-NC-SA 4.0. You are free to: Share â€” copy and redistribute the material in any medium or format; Adapt â€” remix, transform, and build upon the material. The licensor cannot revoke these freedoms as long as you follow the license terms. Under the following terms: Attribution â€” You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use; NonCommercial â€” You may not use the material for commercial purposes; ShareAlike â€” If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original. No additional restrictions â€” You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits. Notices: You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation. No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material. To view a copy of this license, visit creativecommons.org/licenses/by-nc-sa/4.0", scrolltmp, 5)
+        lwrite(bx + 4, by + 4 + dy, 42, "This work is licensed under CC BY-NC-SA 4.0. You are free to: Share — copy and redistribute the material in any medium or format; Adapt — remix, transform, and build upon the material. The licensor cannot revoke these freedoms as long as you follow the license terms. Under the following terms: Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use; NonCommercial — You may not use the material for commercial purposes; ShareAlike — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original. No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits. Notices: You do not have to comply with the license for elements of the material in the public domain or where your use is permitted by an applicable exception or limitation. No warranties are given. The license may not give you all of the permissions necessary for your intended use. For example, other rights such as publicity, privacy, or moral rights may limit how you use the material. To view a copy of this license, visit creativecommons.org/licenses/by-nc-sa/4.0", scrolltmp, 5)
         
         local evs = {term.pull()}
         if evs[1] == "touch" then
-            for button in buttonList do
+            for k, button in pairs(buttonList) do
                 if evs[3] >= button[1] and evs[3] <= button[1] + button[3] and evs[4] == button[2] then
                     button[4]()
                     break
@@ -224,7 +314,7 @@ function firstPage()
     
     while true do
         local evs = {term.pull("touch")}
-        for button in buttonList do
+        for k, button in pairs(buttonList) do
             if evs[3] >= button[1] and evs[3] <= button[1] + button[3] and evs[4] == button[2] then
                 button[4]()
                 break
