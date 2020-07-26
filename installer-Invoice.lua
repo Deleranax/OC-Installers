@@ -46,7 +46,7 @@ if h > 16 then
     by = math.floor((h - 16)/2)
 end
 
-function lwrite(x, y, mx, str, offset, limit)
+local function lwrite(x, y, mx, str, offset, limit)
     offset = offset or 0
     strs = text.tokenize(str)
     local txt = ""
@@ -75,7 +75,7 @@ function lwrite(x, y, mx, str, offset, limit)
     return dy +1
 end
 
-function addButton(str, f)
+local function addButton(str, f)
     str = " "..str.." "
     x = bx + 46 - str:len()
     for k,v in pairs(buttonList) do
@@ -90,7 +90,7 @@ function addButton(str, f)
     gpu.set(x, y, str)
 end
 
-function getOnlineData(url)
+local function getOnlineData(url)
     local result, response = pcall(net.request, url)
     if result then
         local str = ""
@@ -116,7 +116,7 @@ function getOnlineData(url)
     end
 end
 
-function downloadFile(url, path, name)
+local function downloadFile(url, path, name)
     url = baseUrl.."/"..ownerName.."/"..repositoryName.."/"..branch..url
     fs.makeDirectory(path)
     local f, reason = io.open(path..name, "w")
@@ -140,7 +140,7 @@ function downloadFile(url, path, name)
     end
 end
 
-function drawWindow()
+local function drawWindow()
     buttonList = {}
     gpu.setBackground(white)
     gpu.setForeground(white)
@@ -153,7 +153,7 @@ function drawWindow()
     gpu.set(bx, by, "               Temver Setup Wizard                ")
 end
 
-function drawBar(c, m)
+local function drawBar(c, m)
     local nb = math.ceil((c/m) * 42)
     
     gpu.setBackground(white)
@@ -166,14 +166,14 @@ function drawBar(c, m)
     gpu.fill(bx + 4, by + 3, nb, 1, " ")
 end
 
-function cancel()
+local function cancel()
     gpu.setBackground(black)
     gpu.setForeground(white)
     term.clear()
     os.exit()
 end
 
-function lastPage()
+local function lastPage()
     drawWindow()
     gpu.setForeground(black)
     gpu.setBackground(white)
@@ -198,7 +198,7 @@ function lastPage()
     end
 end
 
-function install()
+local function install()
     drawWindow()
     gpu.setForeground(nblack)
     gpu.setBackground(white)
@@ -240,7 +240,7 @@ function install()
     end
 end
 
-function summaryPage()
+local function summaryPage()
     manifest = getOnlineData(baseUrl.."/"..ownerName.."/"..repositoryName.."/"..branch.."/manifest.txt")
     drawWindow()
     gpu.setForeground(nblack)
@@ -266,7 +266,7 @@ function summaryPage()
     end
 end
 
-function licensePage()
+local function licensePage()
     drawWindow()
     gpu.setForeground(nblack)
     gpu.setBackground(white)
@@ -299,7 +299,7 @@ function licensePage()
     end
 end
 
-function firstPage()
+local function firstPage()
     drawWindow()
     gpu.setForeground(black)
     gpu.setBackground(white)
