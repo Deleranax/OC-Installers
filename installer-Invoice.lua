@@ -193,7 +193,7 @@ local function lastPage()
     
     gpu.setForeground(nblack)
     
-    dy = dy + lwrite(bx + 4, by + 3 + dy, 42, "Setup has finished installing "..repositoryName.." on your computer. Refer to the official documentation to know which script to execute to launch the program.")
+    dy = dy + lwrite(bx + 4, by + 3 + dy, 42, "Setup has finished installing "..repositoryName.." on your computer. Refer to the official documentation for more informations.")
 
     dy = dy + lwrite(bx + 4, by + 4 + dy, 42, "This program may contain shared libraries. To avoid any problems, reboot the computer before using the program.")
     
